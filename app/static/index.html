@@ -74,9 +74,6 @@
         </div>
 
         <div class="auth-body">
-          <!-- In-Page One-Tap / Credential Button Container rendered by Google Identity Services -->
-          <div id="g_id_signin_container" class="gis-slot"></div>
-
           <!-- Primary Styled In-App Continue with Google Action -->
           <button id="btn-google-oauth" type="button" class="btn-google">
             <svg class="google-logo" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -88,43 +85,13 @@
             <span id="btn-google-oauth-label">Continue with Google</span>
           </button>
 
-          <p class="privacy-note">
-            <span aria-hidden="true">🔒</span>
-            <span>Read-only OpenID (`email`, `profile`). Includes a quick 30-second privacy &amp; daily health tour right after you sign in.</span>
-          </p>
-
           <!-- Shown automatically when server GOOGLE_CLIENT_ID is not configured yet -->
           <div id="oauth-config-hint" class="oauth-hint" style="display: none;">
             <strong>Google OAuth credentials pending on server</strong>
             <p id="oauth-config-hint-text"></p>
           </div>
 
-          <!-- Decluttered fallback when OAuth isn't configured yet -->
-          <details id="manual-fallback-details" class="fallback-disclosure">
-            <summary>Use direct email sign-in while OAuth is unconfigured</summary>
-            <form id="google-auth-form" class="fallback-form">
-              <div class="field-group">
-                <label for="login-email">Google Email</label>
-                <input id="login-email" name="email" type="email" autocomplete="email" required placeholder="you@gmail.com">
-              </div>
-              <div class="field-group">
-                <label for="login-name">Full Name</label>
-                <input id="login-name" name="name" type="text" autocomplete="name" required placeholder="Your Name">
-              </div>
-              <div class="field-group">
-                <label for="login-allergies">Food Allergies (optional)</label>
-                <input id="login-allergies" name="allergies" type="text" autocomplete="off" placeholder="e.g. peanuts, shellfish">
-              </div>
-              <button id="btn-google-signin" type="submit" class="btn-soft-emerald full-w">Sign In with Email</button>
-            </form>
-          </details>
-
           <div id="auth-error" class="status-banner error" role="alert"></div>
-
-          <div class="discovery-mini">
-            <span id="discovery-status">Discovering session endpoints...</span>
-            <span id="discovery-base-url"></span>
-          </div>
         </div>
       </div>
     </section>

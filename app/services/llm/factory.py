@@ -4,6 +4,7 @@ from typing import Dict, Any
 from app.core.config import settings
 from app.services.llm.base import BaseLLMProvider
 from app.services.llm.mock_provider import MockLLMProvider
+from app.services.llm.gemini_provider import GeminiProvider
 from app.services.llm.deepseek_provider import DeepSeekProvider
 from app.services.llm.claude_provider import ClaudeProvider
 from app.services.llm.openai_provider import OpenAIProvider
@@ -11,7 +12,9 @@ from app.services.llm.openai_provider import OpenAIProvider
 def get_llm_provider() -> BaseLLMProvider:
     provider_name = settings.LLM_PROVIDER.lower()
     
-    if provider_name == "deepseek":
+    if provider_name == "gemini":
+        return GeminiProvider()
+    elif provider_name == "deepseek":
         return DeepSeekProvider()
     elif provider_name == "claude":
         return ClaudeProvider()
@@ -39,6 +42,33 @@ async def check_llm_connectivity() -> Dict[str, Any]:
             "latency_ms": round((time.time() - start_time) * 1000, 2),
             "mode": "Offline Local (Zero external dependencies, guaranteed < 5ms)"
         }
+
+    elif provider == "gemini":
+        api_key = settings.GEMINI_API_KEY.strip()
+        model = settings.GEMINI_MODEL.strip() or "gemini-2.5-flash"
+        base_url = settings.GEMINI_BASE_URL.strip().rstrip("/") or "https://generativelanguage.googleapis.com/v1beta"
+        if not api_key:
+            return {
+                "provider": "gemini",
+                "model": model,
+                "status": "UNCONFIGURED",
+                "error": "GEMINI_API_KEY missing in .env (Auto-falling back to deterministic engine)"
+            }
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                res = await client.get(
+                    f"{base_url}/models/{model}",
+                    headers={"x-goog-api-key": api_key}
+                )
+                latency = round((time.time() - start_time) * 1000, 2)
+                return {
+                    "provider": "gemini",
+                    "model": model,
+                    "status": "CONNECTED" if res.status_code == 200 else f"ERROR_{res.status_code}",
+                    "latency_ms": latency
+                }
+        except Exception as e:
+            return {"provider": "gemini", "model": model, "status": "OFFLINE", "error": str(e)}
 
     elif provider == "deepseek":
         if not settings.DEEPSEEK_API_KEY:

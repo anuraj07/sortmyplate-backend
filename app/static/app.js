@@ -94,9 +94,6 @@ function getDiscoveryOrigin() {
 }
 
 async function discoverEndpointsForSession() {
-  const statusEl = document.getElementById("discovery-status");
-  const baseUrlEl = document.getElementById("discovery-base-url");
-
   const primaryOrigin = getDiscoveryOrigin();
   const candidates = primaryOrigin === DEFAULT_DISCOVERY_ORIGIN
     ? [primaryOrigin]
@@ -127,11 +124,6 @@ async function discoverEndpointsForSession() {
       };
 
       sessionStorage.setItem(SESSION_ENDPOINTS_KEY, JSON.stringify(sessionDiscovery));
-
-      const count = Object.keys(sessionDiscovery.endpoints).length;
-      statusEl.textContent = `Resolved ${count} endpoints`;
-      statusEl.style.color = "var(--emerald)";
-      baseUrlEl.textContent = sessionDiscovery.base_url;
       return;
     } catch (err) {
       console.warn(`Discovery attempt failed on ${origin}:`, err);
@@ -142,16 +134,12 @@ async function discoverEndpointsForSession() {
   if (cached) {
     try {
       sessionDiscovery = JSON.parse(cached);
-      statusEl.textContent = "Cached endpoints active";
-      baseUrlEl.textContent = sessionDiscovery.base_url;
       return;
     } catch (_) {
       sessionStorage.removeItem(SESSION_ENDPOINTS_KEY);
     }
   }
 
-  statusEl.textContent = "Discovery offline";
-  statusEl.style.color = "var(--coral)";
   showBanner("auth-error", "Could not connect to SortMyPlate backend discovery.", true);
 }
 
@@ -194,9 +182,8 @@ function setupEventListeners() {
   document.getElementById("btn-skip-onboarding").addEventListener("click", completeOnboardingTour);
   document.getElementById("btn-finish-onboarding").addEventListener("click", completeOnboardingTour);
 
-  // Google Sign-In & Manual fallback
+  // Google Sign-In
   document.getElementById("btn-google-oauth").addEventListener("click", handleContinueWithGoogle);
-  document.getElementById("google-auth-form").addEventListener("submit", handleFallbackEmailSignIn);
   document.getElementById("btn-logout").addEventListener("click", handleSignOut);
 
   // Navigation pills & jump tiles
@@ -358,16 +345,6 @@ function initGoogleIdentityServicesIfNeeded() {
         ux_mode: "popup",
         use_fedcm_for_prompt: true
       });
-      const container = document.getElementById("g_id_signin_container");
-      if (container) {
-        window.google.accounts.id.renderButton(container, {
-          theme: "outline",
-          size: "large",
-          shape: "pill",
-          width: 340,
-          text: "continue_with"
-        });
-      }
       if (!currentUser) {
         try {
           window.google.accounts.id.prompt();
@@ -501,7 +478,7 @@ async function handleContinueWithGoogle() {
         resetGoogleButtonState();
         showBanner(
           "auth-error",
-          "Please allow the Google sign-in window or use the Google Identity button right above so you stay inside SortMyPlate.",
+          "Please allow popups for this site so Google Sign-In can complete without leaving SortMyPlate.",
           true
         );
         return;
@@ -520,9 +497,8 @@ async function handleContinueWithGoogle() {
   const hintText = document.getElementById("oauth-config-hint-text");
   const callbackUri = `${sessionDiscovery.base_url}/v1/auth/google/callback`;
   hintText.textContent =
-    `Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in server environment variables, and add ${callbackUri} as an Authorized Redirect URI in Google Cloud Console. You can use the direct email fallback below right now.`;
+    `Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in server environment variables, and add ${callbackUri} as an Authorized Redirect URI in Google Cloud Console.`;
   hintBox.style.display = "block";
-  document.getElementById("manual-fallback-details").open = true;
 }
 
 async function handleOAuthPopupMessage(event) {
@@ -599,39 +575,6 @@ function resetGoogleButtonState() {
   const label = document.getElementById("btn-google-oauth-label");
   btn.disabled = false;
   label.textContent = "Continue with Google";
-}
-
-async function handleFallbackEmailSignIn(e) {
-  e.preventDefault();
-  showBanner("auth-error", "", true);
-
-  const email = document.getElementById("login-email").value.trim();
-  const name = document.getElementById("login-name").value.trim();
-  const allergiesRaw = document.getElementById("login-allergies").value;
-  const allergies = allergiesRaw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-
-  if (!email || !name) {
-    showBanner("auth-error", "Enter your email address and full name.", true);
-    return;
-  }
-
-  const btn = document.getElementById("btn-google-signin");
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(resolveEndpoint("auth_google"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, name, allergies })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Sign-In failed");
-    await completeAuthSuccess(data);
-  } catch (err) {
-    showBanner("auth-error", err.message, true);
-  } finally {
-    btn.disabled = false;
-  }
 }
 
 function hasCompletedOnboarding(userId) {
@@ -782,7 +725,6 @@ function handleSignOut() {
   sessionStorage.removeItem(SESSION_AUTH_KEY);
 
   document.getElementById("meal-result-container").classList.remove("show");
-  document.getElementById("google-auth-form").reset();
   showAuthView();
 }
 
@@ -818,6 +760,7 @@ async function checkLlmStatus() {
     }
     const data = await res.json();
     const map = {
+      gemini: "Gemini 2.5 Flash",
       deepseek: "DeepSeek-V3",
       claude: "Claude 3.5",
       openai: "GPT-4o",

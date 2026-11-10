@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = ""
     
     # LLM Settings
-    LLM_PROVIDER: Literal["mock", "deepseek", "claude", "openai"] = "mock"
+    LLM_PROVIDER: Literal["mock", "gemini", "deepseek", "claude", "openai", "ollama"] = "mock"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
     ANTHROPIC_API_KEY: str = ""

@@ -373,6 +373,10 @@ def test_in_app_google_id_token_and_access_token_and_static_icons(monkeypatch):
         assert html_res.status_code == 200
         assert "/static/favicon.svg" in html_res.text
         assert 'id="onboarding-section"' in html_res.text
+        assert "manual-fallback-details" not in html_res.text
+        assert "discovery-mini" not in html_res.text
+        assert "Read-only OpenID" not in html_res.text
+        assert "g_id_signin_container" not in html_res.text
         for static_path in [
             "/static/favicon.svg",
             "/static/icon-192.png",

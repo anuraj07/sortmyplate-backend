@@ -92,5 +92,5 @@ async def get_next_meal(
         prep_instructions=best_recipe.prep_instructions,
         member_customizations=individual_rationales,
         overall_consensus_reasoning=group_summary,
-        llm_provider_used=settings.LLM_PROVIDER
+        llm_provider_used=getattr(llm, "last_provider_used", settings.LLM_PROVIDER)
     )
