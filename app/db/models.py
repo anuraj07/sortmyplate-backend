@@ -47,3 +47,21 @@ class BiomarkerPanelDB(Base):
     report_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     encrypted_payload = Column(Text, nullable=False) # AES-256-GCM ciphertext (base64)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class OAuthSessionDB(Base):
+    """
+    Worker-safe OAuth 2.0 state and one-time encrypted AuthResponse exchange store.
+    Prevents CSRF, open redirects, and token leakage in callback URLs.
+    """
+    __tablename__ = "oauth_sessions"
+
+    state = Column(String(128), primary_key=True, index=True)
+    platform = Column(String(32), default="web")
+    client_redirect = Column(Text, nullable=True)
+    callback_uri = Column(Text, nullable=False)
+    exchange_code = Column(String(128), nullable=True)
+    encrypted_auth_payload = Column(Text, nullable=True)
+    status = Column(String(32), default="pending", index=True)
+    error_message = Column(Text, nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

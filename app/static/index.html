@@ -3,249 +3,633 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SortMyPlate | Biomarker-Driven Nutrition Engine</title>
+  <title>SortMyPlate | Airy Biomarker Nutrition &amp; Plate Insights</title>
+  <meta name="theme-color" content="#13251B">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
   <link rel="stylesheet" href="/static/styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2224%22 font-size=%2224%22>🥗</text></svg>">
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <header>
+  <div class="app-shell">
+    <!-- Calm Botanical Top Bar -->
+    <header class="topbar">
       <div class="brand">
-        <div class="brand-icon" aria-hidden="true">🥗</div>
-        <div class="brand-text">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 512 512" width="24" height="24" fill="none">
+            <path d="M 359 132 A 161 161 0 0 0 115 334" stroke="#FAFBF7" stroke-width="34" stroke-linecap="round"/>
+            <path d="M 170 392 A 161 161 0 0 0 397 334" stroke="#49C983" stroke-width="34" stroke-linecap="round"/>
+            <path d="M 417 266 A 161 161 0 0 0 404 192" stroke="#A6EB82" stroke-width="34" stroke-linecap="round"/>
+            <path d="M182 335 C177 223 243 166 335 172 C338 276 271 340 182 335 Z" fill="#A6F2C2"/>
+            <path d="M172 346 Q228 276 294 212" stroke="#13251B" stroke-width="18" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="brand-copy">
           <h1>SortMyPlate</h1>
-          <p>Zero-Trust Biomarker Nutrition Engine</p>
+          <p>Biomarker Wellness &amp; Nutrition</p>
         </div>
       </div>
 
-      <div class="user-controls">
-        <div class="security-pill">
-          <span aria-hidden="true">🔒</span>
-          <span>AES-256-GCM PHI Vault</span>
-        </div>
+      <!-- Desktop Section Tabs (Hidden before Sign-In) -->
+      <nav id="desktop-nav" class="pill-nav" role="tablist" aria-label="App sections" style="display: none;">
+        <button type="button" class="nav-pill active" data-tab="today" role="tab" aria-selected="true">Today</button>
+        <button type="button" class="nav-pill" data-tab="blood" role="tab" aria-selected="false">Blood Lab</button>
+        <button type="button" class="nav-pill" data-tab="insights" role="tab" aria-selected="false">Insights</button>
+        <button type="button" class="nav-pill" data-tab="circle" role="tab" aria-selected="false">Circle &amp; Vault</button>
+      </nav>
 
-        <div id="llm-pill" class="security-pill" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: var(--accent-purple);">
-          <span aria-hidden="true">🧠</span>
-          <span id="llm-model-name">Discovering API...</span>
-        </div>
+      <div class="topbar-actions">
+        <span id="llm-pill" class="chip chip-soft">
+          <span class="dot-live" aria-hidden="true"></span>
+          <span id="llm-model-name">Connecting...</span>
+        </span>
 
-        <div id="user-badge" class="user-badge" style="display: none;">
-          <img id="user-avatar" class="avatar" src="https://ui-avatars.com/api/?name=User&background=38bdf8&color=0f172a" alt="User Avatar">
-          <div>
-            <div id="user-name" class="user-name">User</div>
-            <div id="user-email" style="font-size: 11px; color: var(--text-muted);">user@gmail.com</div>
+        <button id="btn-open-guide" type="button" class="chip chip-button" title="Safety, Privacy &amp; Daily Health Guide" aria-label="Open safety and how-to guide">
+          <span aria-hidden="true">?</span>
+          <span>Guide</span>
+        </button>
+
+        <div id="user-badge" class="user-pill" style="display: none;">
+          <img id="user-avatar" class="avatar-sm" src="" alt="Profile photo">
+          <div class="user-pill-meta">
+            <span id="user-name" class="user-pill-name">Account</span>
+            <span id="user-email" class="user-pill-email">email</span>
           </div>
-          <button id="btn-logout" type="button" class="btn-secondary" style="margin-left: 8px;">Sign Out</button>
         </div>
       </div>
     </header>
 
-    <!-- Bootstrap Endpoint Status Strip -->
-    <div id="discovery-strip" style="font-size: 11px; color: var(--text-muted); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 0 8px;">
-      <span><span aria-hidden="true">📡</span> Session Endpoint Discovery: <strong id="discovery-status" style="color: var(--accent-cyan);">Initializing...</strong></span>
-      <span id="discovery-base-url"></span>
-    </div>
-
-    <!-- Sign-In View (Shown when unauthenticated) -->
-    <section id="auth-section" class="hero-card" style="max-width: 560px; margin: 40px auto;">
-      <h2 class="hero-title" style="font-size: 26px;">Sign in to SortMyPlate</h2>
-      <p class="hero-subtitle" style="margin-bottom: 24px;">
-        Connect your Google account to securely upload your 6-month blood test report
-        and receive personalized meal recommendations.
-      </p>
-
-      <div id="g_id_signin_container" style="margin-bottom: 16px;"></div>
-
-      <form id="google-auth-form" style="display: flex; flex-direction: column; gap: 12px; text-align: left;">
-        <div>
-          <label for="login-email" style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Google Email Address</label>
-          <input id="login-email" name="email" type="email" autocomplete="email" required placeholder="you@gmail.com" class="select-custom" style="width: 100%; cursor: text;">
+    <!-- ================================================================ -->
+    <!-- PRE-AUTH LANDING: SERENE IN-APP GOOGLE SIGN-IN                   -->
+    <!-- ================================================================ -->
+    <section id="auth-section" class="auth-stage" aria-label="Sign In">
+      <div class="auth-panel auth-panel-centered">
+        <div class="auth-aura">
+          <span class="aura-tag">Zero-Trust Biomarker Wellness</span>
+          <h2>Sign in safely to begin</h2>
+          <p>
+            Connect with Google right inside this page—no full-page redirect. SortMyPlate syncs only your verified name, email, and avatar while your labs stay encrypted.
+          </p>
         </div>
-        <div>
-          <label for="login-name" style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Full Name</label>
-          <input id="login-name" name="name" type="text" autocomplete="name" required placeholder="Your Name" class="select-custom" style="width: 100%; cursor: text;">
-        </div>
-        <div>
-          <label for="login-allergies" style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Food Allergies (comma separated, optional)</label>
-          <input id="login-allergies" name="allergies" type="text" autocomplete="off" placeholder="e.g. peanuts, shellfish" class="select-custom" style="width: 100%; cursor: text;">
-        </div>
-        <button id="btn-google-signin" type="submit" class="btn-primary" style="justify-content: center; margin-top: 8px; width: 100%;">
-          <span aria-hidden="true">🔐</span>
-          <span>Continue with Google</span>
-        </button>
-      </form>
 
-      <div id="auth-error" class="status-banner error" role="alert"></div>
-    </section>
+        <div class="auth-body">
+          <!-- In-Page One-Tap / Credential Button Container rendered by Google Identity Services -->
+          <div id="g_id_signin_container" class="gis-slot"></div>
 
-    <!-- Main Dashboard (Shown after authentication) -->
-    <main id="dashboard-section" style="display: none;">
-      <!-- Hero 1-Click Action -->
-      <section class="hero-card">
-        <h2 class="hero-title">What should I eat next?</h2>
-        <p class="hero-subtitle">
-          Instant, clinically-reasoned meal tailored directly to your blood biomarkers
-          and your household's real-time cooking circle.
-        </p>
-
-        <div class="action-bar">
-          <label for="meal-slot-select" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Meal Slot</label>
-          <select id="meal-slot-select" class="select-custom">
-            <option value="DINNER" selected>🌙 Dinner</option>
-            <option value="LUNCH">☀️ Lunch</option>
-            <option value="BREAKFAST">🌅 Breakfast</option>
-            <option value="SNACK">🍎 Afternoon Snack</option>
-          </select>
-
-          <button id="btn-next-meal" type="button" class="btn-primary">
-            <span aria-hidden="true">✨</span>
-            <span>Get Next Meal</span>
+          <!-- Primary Styled In-App Continue with Google Action -->
+          <button id="btn-google-oauth" type="button" class="btn-google">
+            <svg class="google-logo" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+            </svg>
+            <span id="btn-google-oauth-label">Continue with Google</span>
           </button>
-        </div>
 
-        <div style="margin-top: 16px; font-size: 12px; color: var(--text-muted);">
-          🔒 Decoupled Subject Token: <code id="subject-token-display" style="color: var(--accent-cyan);">sub_...</code>
-        </div>
-        <div id="meal-error" class="status-banner error" role="alert" style="max-width: 560px; margin-left: auto; margin-right: auto;"></div>
-      </section>
-
-      <!-- Dashboard Content -->
-      <div class="dashboard-grid">
-        <!-- Household / Flatmates Panel -->
-        <div class="card">
-          <div class="card-header">
-            <h2>
-              <span aria-hidden="true">👥</span>
-              <span id="group-name">Household / Flat Circle</span>
-            </h2>
-            <div id="group-code-wrapper" style="display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-              <span>Code: <strong id="group-invite-code" style="color: var(--accent-cyan);"></strong></span>
-              <button id="btn-leave-group" type="button" class="btn-secondary" style="padding: 4px 10px; font-size: 11px;">Leave</button>
-            </div>
-          </div>
-
-          <!-- Group Actions (Create or Join) -->
-          <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
-            <input id="new-group-name" type="text" aria-label="New group name" placeholder="Group name (e.g. Flat 4B)" class="select-custom" style="flex: 1; padding: 8px 12px; font-size: 12px; cursor: text;">
-            <button id="btn-create-group" type="button" class="btn-secondary">Create</button>
-          </div>
-          <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
-            <input id="join-group-code" type="text" aria-label="Invite code" placeholder="Invite code" class="select-custom" style="flex: 1; padding: 8px 12px; font-size: 12px; cursor: text;">
-            <button id="btn-join-group" type="button" class="btn-secondary">Join Group</button>
-          </div>
-
-          <div id="group-status" class="status-banner" role="status" style="margin-bottom: 12px;"></div>
-
-          <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
-            Check who is eating right now:
+          <p class="privacy-note">
+            <span aria-hidden="true">🔒</span>
+            <span>Read-only OpenID (`email`, `profile`). Includes a quick 30-second privacy &amp; daily health tour right after you sign in.</span>
           </p>
 
-          <div id="member-list" class="member-list">
-            <p style="font-size: 12px; color: var(--text-muted);">No group joined yet — eating in Solo Mode.</p>
-          </div>
-        </div>
-
-        <!-- Blood Biomarkers & PDF Upload Panel -->
-        <div class="card">
-          <div class="card-header">
-            <h2>
-              <span aria-hidden="true">🩸</span>
-              <span>Latest Blood Panel (PHI Vault)</span>
-            </h2>
-            <span id="lab-provider-info" style="font-size: 11px; color: var(--accent-emerald);">No report uploaded</span>
+          <!-- Shown automatically when server GOOGLE_CLIENT_ID is not configured yet -->
+          <div id="oauth-config-hint" class="oauth-hint" style="display: none;">
+            <strong>Google OAuth credentials pending on server</strong>
+            <p id="oauth-config-hint-text"></p>
           </div>
 
-          <table class="biomarker-table">
-            <thead>
-              <tr>
-                <th>Biomarker</th>
-                <th>Value</th>
-                <th>Clinical Status</th>
-              </tr>
-            </thead>
-            <tbody id="biomarkers-tbody">
-              <tr><td colspan="3" style="color: var(--text-muted); text-align: center; padding: 18px;">Upload a PDF or enter biomarkers below to personalize meals.</td></tr>
-            </tbody>
-          </table>
+          <!-- Decluttered fallback when OAuth isn't configured yet -->
+          <details id="manual-fallback-details" class="fallback-disclosure">
+            <summary>Use direct email sign-in while OAuth is unconfigured</summary>
+            <form id="google-auth-form" class="fallback-form">
+              <div class="field-group">
+                <label for="login-email">Google Email</label>
+                <input id="login-email" name="email" type="email" autocomplete="email" required placeholder="you@gmail.com">
+              </div>
+              <div class="field-group">
+                <label for="login-name">Full Name</label>
+                <input id="login-name" name="name" type="text" autocomplete="name" required placeholder="Your Name">
+              </div>
+              <div class="field-group">
+                <label for="login-allergies">Food Allergies (optional)</label>
+                <input id="login-allergies" name="allergies" type="text" autocomplete="off" placeholder="e.g. peanuts, shellfish">
+              </div>
+              <button id="btn-google-signin" type="submit" class="btn-soft-emerald full-w">Sign In with Email</button>
+            </form>
+          </details>
 
-          <!-- Quick Lab Input -->
-          <form id="quick-biomarker-form" style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
-            <select id="biomarker-code" aria-label="Biomarker type" class="select-custom" style="padding: 8px 10px; font-size: 12px;">
-              <option value="APOB">ApoB (mg/dL)</option>
-              <option value="LDL_C">LDL-C (mg/dL)</option>
-              <option value="HBA1C">HbA1c (%)</option>
-              <option value="FERRITIN">Ferritin (ng/mL)</option>
-              <option value="HS_CRP">hs-CRP (mg/L)</option>
-            </select>
-            <input id="biomarker-value" type="number" step="0.1" aria-label="Biomarker numeric value" required placeholder="Value" class="select-custom" style="width: 90px; padding: 8px 10px; font-size: 12px; cursor: text;">
-            <button type="submit" class="btn-secondary">Save Marker</button>
-          </form>
+          <div id="auth-error" class="status-banner error" role="alert"></div>
 
-          <div id="biomarker-status" class="status-banner" role="status"></div>
-
-          <!-- PDF Upload Dropzone -->
-          <label for="pdf-input" class="dropzone" tabindex="0">
-            <input type="file" id="pdf-input" accept="application/pdf" style="display: none;">
-            <div style="font-size: 20px; margin-bottom: 4px;" aria-hidden="true">📄</div>
-            <div style="font-size: 13px; font-weight: 600;">Upload Blood Test Report (PDF)</div>
-            <div id="upload-status" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-              Supports Quest, LabCorp, Metropolis & Hospital PDFs (AES-256 Encrypted)
-            </div>
-          </label>
+          <div class="discovery-mini">
+            <span id="discovery-status">Discovering session endpoints...</span>
+            <span id="discovery-base-url"></span>
+          </div>
         </div>
       </div>
+    </section>
 
-      <!-- Meal Recommendation Output Section -->
-      <section id="meal-result-container" class="meal-result">
-        <div id="allergen-safeguard-banner" class="allergen-banner" style="display: none;"></div>
-
-        <div class="meal-header">
-          <div class="meal-title">
-            <h2 id="meal-title-text">Meal Title</h2>
-            <p id="meal-desc-text">Meal description</p>
+    <!-- ================================================================ -->
+    <!-- POST-LOGIN ONBOARDING: SAFETY, USAGE & DAILY HEALTH TOUR         -->
+    <!-- ================================================================ -->
+    <section id="onboarding-section" class="onboarding-stage-shell" aria-label="Welcome Tour" style="display: none;">
+      <div class="onboarding-user-strip">
+        <div class="bio-user-chip">
+          <img id="onboard-avatar" class="avatar-md" src="" alt="Google profile photo">
+          <div>
+            <div id="onboard-greeting" class="onboard-greeting">Welcome to SortMyPlate</div>
+            <div id="onboard-email" class="onboard-sub">Signed in via Google</div>
           </div>
-          <div id="meal-prep-badge" class="badge badge-normal" style="font-size: 13px; padding: 6px 12px;">
-            ⏱️ 25 mins prep
+        </div>
+        <button id="btn-skip-onboarding" type="button" class="btn-ghost">Skip Tour</button>
+      </div>
+
+      <div class="onboarding-card">
+        <div class="onboarding-top">
+          <div class="onboarding-steps" role="tablist" aria-label="Onboarding topics">
+            <button type="button" class="step-pill active" data-step="0" role="tab" aria-selected="true">1. Safety &amp; Privacy</button>
+            <button type="button" class="step-pill" data-step="1" role="tab" aria-selected="false">2. How It Works</button>
+            <button type="button" class="step-pill" data-step="2" role="tab" aria-selected="false">3. Daily Health</button>
+          </div>
+          <span id="onboarding-counter" class="step-counter">1 / 3</span>
+        </div>
+
+        <div id="onboarding-slide-container" class="onboarding-stage">
+          <!-- Slide 0: Security & Privacy -->
+          <article class="slide active" data-slide="0">
+            <div class="slide-badge badge-emerald">Zero-Trust PHI Architecture</div>
+            <h2>Your blood data stays encrypted &amp; detached from your name.</h2>
+            <p class="slide-lead">
+              SortMyPlate separates who you are from what your lab reports contain—so your nutrition insights never expose private identity inside the medical vault.
+            </p>
+            <div class="feature-stack">
+              <div class="feature-item">
+                <span class="feature-icon" aria-hidden="true">🔐</span>
+                <div>
+                  <strong>AES-256-GCM Field Encryption</strong>
+                  <p>Every lab value (`ApoB`, `HbA1c`, `Ferritin`, `hs-CRP`) is encrypted before touching the database.</p>
+                </div>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon" aria-hidden="true">🪪</span>
+                <div>
+                  <strong>Identity-Decoupled Subject Tokens</strong>
+                  <p>Your Google email lives in Zone A, while blood reports sit under an anonymous `sub_...` token in Zone B.</p>
+                </div>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon" aria-hidden="true">🛡️</span>
+                <div>
+                  <strong>Deterministic Allergy Guardrails</strong>
+                  <p>Strict allergen checks run in code before AI reasoning ever formats your recipe.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Slide 1: How to Use -->
+          <article class="slide" data-slide="1" hidden>
+            <div class="slide-badge badge-sage">3 Effortless Steps</div>
+            <h2>From blood test PDF to tonight's dinner in 60 seconds.</h2>
+            <p class="slide-lead">
+              No calorie obsession or manual meal planning required—just follow three calm weekly rhythms.
+            </p>
+            <div class="feature-stack">
+              <div class="feature-item">
+                <span class="step-num">1</span>
+                <div>
+                  <strong>Verify Dietary Guardrails</strong>
+                  <p>Add any hard food allergies or eating preferences in Circle &amp; Vault whenever needed.</p>
+                </div>
+              </div>
+              <div class="feature-item">
+                <span class="step-num">2</span>
+                <div>
+                  <strong>Upload a Lab PDF or Add Markers</strong>
+                  <p>Drop a Quest, LabCorp, Metropolis, or hospital PDF—or type any key marker manually in seconds.</p>
+                </div>
+              </div>
+              <div class="feature-item">
+                <span class="step-num">3</span>
+                <div>
+                  <strong>Check Who's Eating &amp; Tap "Get Next Meal"</strong>
+                  <p>Eating solo or cooking with flatmates? Pick your meal slot for one shared dish with tailored finishes.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Slide 2: Daily Health Impact -->
+          <article class="slide" data-slide="2" hidden>
+            <div class="slide-badge badge-amber">Preventive Compounding</div>
+            <h2>How small daily meal choices reshape your 6-month lab panels.</h2>
+            <p class="slide-lead">
+              Lasting biomarker shifts happen meal-by-meal, gently nudging nutrition without rigid dieting.
+            </p>
+            <div class="feature-stack">
+              <div class="feature-item">
+                <span class="feature-icon" aria-hidden="true">🌿</span>
+                <div>
+                  <strong>Flatter Daily Glucose &amp; HbA1c Curves</strong>
+                  <p>Low-glycemic load, high-fiber pairings reduce post-meal glucose spikes and afternoon brain fog.</p>
+                </div>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon" aria-hidden="true">💚</span>
+                <div>
+                  <strong>Target ApoB &amp; LDL-C Naturally</strong>
+                  <p>Soluble fibers and heart-healthy unsaturated fats help lower atherogenic lipids steadily.</p>
+                </div>
+              </div>
+              <div class="feature-item">
+                <span class="feature-icon" aria-hidden="true">⚡</span>
+                <div>
+                  <strong>Calm hs-CRP Inflammation &amp; Restore Ferritin</strong>
+                  <p>Smart iron + vitamin C absorption pairing and anti-inflammatory finishes lift baseline energy.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="onboarding-footer">
+          <div class="dot-group" aria-hidden="true">
+            <span class="pager-dot active"></span>
+            <span class="pager-dot"></span>
+            <span class="pager-dot"></span>
+          </div>
+          <div class="onboarding-arrows">
+            <button id="btn-prev-slide" type="button" class="btn-ghost">Back</button>
+            <button id="btn-next-slide" type="button" class="btn-soft-emerald">Next</button>
+            <button id="btn-finish-onboarding" type="button" class="btn-forest" style="display: none;">Enter SortMyPlate →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ -->
+    <!-- AUTHENTICATED APP: 4 DECLUTTERED SECTIONS                        -->
+    <!-- ================================================================ -->
+    <main id="dashboard-section" style="display: none;">
+      <!-- SECTION 1: TODAY (Calm Hero Gauge + 1-Tap Meal CTA + 2 Bento Shortcuts) -->
+      <section id="view-today" class="tab-panel active" role="tabpanel">
+        <div class="today-layout">
+          <!-- Nixtio Bioluminescent Forest-Emerald Hero Gauge Card -->
+          <div class="hero-bio-card">
+            <div class="bio-card-top">
+              <div class="bio-user-chip">
+                <img id="hero-avatar" class="avatar-md" src="" alt="User avatar">
+                <div>
+                  <div id="hero-greeting" class="bio-greeting">Welcome back</div>
+                  <div id="hero-subline" class="bio-subline">Zero-Trust PHI Vault Active</div>
+                </div>
+              </div>
+              <button id="btn-hero-help" type="button" class="circle-icon-btn" title="How SortMyPlate works &amp; privacy info" aria-label="Open safety and usage guide">?</button>
+            </div>
+
+            <div class="bio-center">
+              <span class="bio-label">Plate &amp; Metabolic Readiness</span>
+              <div id="readiness-score" class="bio-score">--</div>
+              <div id="readiness-pill" class="bio-delta-pill">Add a blood panel to calibrate</div>
+            </div>
+
+            <!-- Signature Nixtio White Tick Ruler -->
+            <div class="tick-ruler" aria-hidden="true"></div>
+
+            <!-- Next Meal Interactive Action Strip -->
+            <div class="next-meal-dock">
+              <div class="next-meal-head">
+                <div>
+                  <h3>What should I eat next?</h3>
+                  <p>Matched to your biomarkers &amp; active household diners</p>
+                </div>
+                <span id="active-diners-chip" class="chip chip-dark">Solo Mode</span>
+              </div>
+
+              <div class="meal-slot-pills" role="group" aria-label="Choose meal time">
+                <button type="button" class="slot-pill" data-slot="BREAKFAST">🌅 Breakfast</button>
+                <button type="button" class="slot-pill" data-slot="LUNCH">☀️ Lunch</button>
+                <button type="button" class="slot-pill active" data-slot="DINNER">🌙 Dinner</button>
+                <button type="button" class="slot-pill" data-slot="SNACK">🍎 Snack</button>
+              </div>
+
+              <button id="btn-next-meal" type="button" class="btn-mint-cta">
+                <span>Get Next Meal</span>
+                <span class="arrow-circle" aria-hidden="true">→</span>
+              </button>
+
+              <div id="meal-error" class="status-banner error" role="alert"></div>
+            </div>
+          </div>
+
+          <!-- Right Column: 2 Signature Bento Shortcuts + Quick Tips -->
+          <div class="today-side">
+            <div class="bento-pair">
+              <button type="button" class="bento-tile bento-sage jump-tab" data-jump="blood">
+                <div class="bento-art bento-art-dna" aria-hidden="true"></div>
+                <span class="bento-kicker">PHI Lab Vault</span>
+                <strong id="today-lab-headline" class="bento-title">Blood Lab</strong>
+                <p id="today-lab-desc" class="bento-sub">Upload PDF or view ranges</p>
+                <span class="bento-pill">
+                  <span id="today-lab-badge">0 Markers</span>
+                  <span aria-hidden="true">→</span>
+                </span>
+              </button>
+
+              <button type="button" class="bento-tile bento-amber jump-tab" data-jump="circle">
+                <div class="bento-art bento-art-ring" aria-hidden="true"></div>
+                <span class="bento-kicker">Shared Cooking</span>
+                <strong id="today-circle-headline" class="bento-title">Dinner Circle</strong>
+                <p id="today-circle-desc" class="bento-sub">Toggle who is eating tonight</p>
+                <span class="bento-pill">
+                  <span id="today-circle-badge">Solo Mode</span>
+                  <span aria-hidden="true">→</span>
+                </span>
+              </button>
+            </div>
+
+            <button type="button" class="bento-tile bento-olive bento-wide jump-tab" data-jump="insights">
+              <div class="bento-row-split">
+                <div>
+                  <span class="bento-kicker">Preventive Trajectory</span>
+                  <strong class="bento-title">Your Daily Insights</strong>
+                  <p class="bento-sub">See how fiber, glycemic pacing, and anti-inflammatory finishes shift ApoB, HbA1c, and hs-CRP.</p>
+                </div>
+                <span class="bento-pill">Explore <span aria-hidden="true">→</span></span>
+              </div>
+            </button>
+
+            <!-- Compact Daily Health Note -->
+            <div class="calm-note-card">
+              <div class="calm-note-head">
+                <span>🔒 Encrypted Session Active</span>
+                <code id="subject-token-display">sub_...</code>
+              </div>
+              <p>All biomarker panels remain decrypted only in memory while planning meals.</p>
+            </div>
           </div>
         </div>
 
-        <div class="macro-grid">
-          <div class="macro-box">
-            <div id="macro-calories" class="macro-value">520 kcal</div>
-            <div class="macro-label">Calories</div>
+        <!-- Recommended Meal Result Card (Revealed cleanly after clicking Get Next Meal) -->
+        <section id="meal-result-container" class="meal-result" aria-live="polite">
+          <div id="allergen-safeguard-banner" class="allergen-banner" style="display: none;"></div>
+
+          <div class="meal-header">
+            <div>
+              <span class="meal-eyebrow">Personalized Clinical Recommendation</span>
+              <h2 id="meal-title-text">Meal Title</h2>
+              <p id="meal-desc-text">Meal description</p>
+            </div>
+            <span id="meal-prep-badge" class="chip chip-soft">⏱️ 25 mins prep</span>
           </div>
-          <div class="macro-box">
-            <div id="macro-protein" class="macro-value">28g</div>
-            <div class="macro-label">Protein</div>
+
+          <div class="macro-grid">
+            <div class="macro-box">
+              <span class="macro-label">Calories</span>
+              <strong id="macro-calories" class="macro-value">--</strong>
+            </div>
+            <div class="macro-box">
+              <span class="macro-label">Protein</span>
+              <strong id="macro-protein" class="macro-value">--</strong>
+            </div>
+            <div class="macro-box">
+              <span class="macro-label">Soluble Fiber</span>
+              <strong id="macro-fiber" class="macro-value">--</strong>
+            </div>
+            <div class="macro-box">
+              <span class="macro-label">Glycemic Load</span>
+              <strong id="macro-gl" class="macro-value">--</strong>
+            </div>
           </div>
-          <div class="macro-box">
-            <div id="macro-fiber" class="macro-value">14g</div>
-            <div class="macro-label">Soluble Fiber</div>
+
+          <div class="meal-columns">
+            <div>
+              <h3>Shared Base Ingredients</h3>
+              <ul id="ingredients-list" class="ingredients-list"></ul>
+            </div>
+            <div>
+              <h3>Household Consensus Summary</h3>
+              <p id="consensus-summary-text" class="consensus-text"></p>
+            </div>
           </div>
-          <div class="macro-box">
-            <div id="macro-gl" class="macro-value">8.5</div>
-            <div class="macro-label">Glycemic Load</div>
+
+          <div style="margin-top: 22px;">
+            <h3 style="margin-bottom: 12px;">Individual Clinical Reasoning &amp; Finishes</h3>
+            <div id="clinical-rationales-container"></div>
+          </div>
+        </section>
+      </section>
+
+      <!-- SECTION 2: BLOOD LAB (Inspired by Screen 1 Cream/Sage Blood Sheet) -->
+      <section id="view-blood" class="tab-panel" role="tabpanel" hidden>
+        <div class="blood-sheet">
+          <div class="blood-sheet-head">
+            <div>
+              <h2>Blood</h2>
+              <p id="blood-narrative" class="blood-narrative">
+                Upload your 6-month lab report PDF or record markers below. Your biomarkers stay encrypted in Zone B via AES-256-GCM.
+              </p>
+            </div>
+            <span id="lab-provider-info" class="chip chip-sage">No report uploaded yet</span>
+          </div>
+
+          <!-- Spectrum Biomarker Cards Container -->
+          <div id="biomarker-cards-grid" class="biomarker-cards-grid"></div>
+
+          <!-- Upload & Manual Entry Dock -->
+          <div class="blood-actions-grid">
+            <label for="pdf-input" class="dropzone" tabindex="0">
+              <input type="file" id="pdf-input" accept="application/pdf" style="display: none;">
+              <div class="dropzone-icon" aria-hidden="true">📄</div>
+              <div class="dropzone-title">Upload Blood Test PDF</div>
+              <div id="upload-status" class="dropzone-sub">
+                Quest, LabCorp, Metropolis &amp; hospital panels • AES-256 Encrypted
+              </div>
+            </label>
+
+            <form id="quick-biomarker-form" class="manual-marker-card">
+              <h3>Add or Update a Marker</h3>
+              <p>Values merge cleanly into your latest encrypted panel.</p>
+              <div class="marker-inputs">
+                <select id="biomarker-code" aria-label="Biomarker type">
+                  <option value="APOB">ApoB (mg/dL)</option>
+                  <option value="LDL_C">LDL-C (mg/dL)</option>
+                  <option value="HBA1C">HbA1c (%)</option>
+                  <option value="FERRITIN">Ferritin (ng/mL)</option>
+                  <option value="HS_CRP">hs-CRP (mg/L)</option>
+                  <option value="VITAMIN_D3">Vitamin D3 (ng/mL)</option>
+                  <option value="FASTING_GLUCOSE">Fasting Glucose (mg/dL)</option>
+                </select>
+                <input id="biomarker-value" type="number" step="0.1" aria-label="Biomarker numeric value" required placeholder="Value">
+                <button type="submit" class="btn-forest">Save Marker</button>
+              </div>
+              <div id="biomarker-status" class="status-banner" role="status"></div>
+            </form>
           </div>
         </div>
+      </section>
 
-        <div style="margin-bottom: 24px;">
-          <h3 style="font-size: 16px; margin-bottom: 8px;">🥣 Shared Base Ingredients:</h3>
-          <ul id="ingredients-list" style="list-style-position: inside; color: var(--text-secondary); line-height: 1.8;"></ul>
+      <!-- SECTION 3: INSIGHTS (Inspired by Screen 3 Bento Insights Grid) -->
+      <section id="view-insights" class="tab-panel" role="tabpanel" hidden>
+        <div class="insights-shell">
+          <div class="insights-header">
+            <div>
+              <h2>Your Insights</h2>
+              <p>Live clinical pillars translating your blood markers into daily nutrition gains.</p>
+            </div>
+            <button type="button" class="btn-soft-emerald jump-tab" data-jump="today">Generate Meal →</button>
+          </div>
+
+          <div id="insights-bento-grid" class="insights-bento-grid"></div>
         </div>
+      </section>
 
-        <div style="margin-bottom: 24px;">
-          <h3 style="font-size: 16px; margin-bottom: 8px;">🤝 Consensus Summary:</h3>
-          <p id="consensus-summary-text" style="color: var(--text-secondary); line-height: 1.6;"></p>
-        </div>
+      <!-- SECTION 4: CIRCLE & VAULT (Household + Google Profile + Safety/Auth) -->
+      <section id="view-circle" class="tab-panel" role="tabpanel" hidden>
+        <div class="circle-grid">
+          <!-- Household Card -->
+          <div class="airy-card">
+            <div class="airy-card-head">
+              <div>
+                <h2 id="group-name">Household / Flat Circle</h2>
+                <p>Select who is sharing tonight's meal so recipes balance everyone safely.</p>
+              </div>
+              <div id="group-code-wrapper" class="group-code-chip" style="display: none;">
+                <span>Code: <strong id="group-invite-code"></strong></span>
+                <button id="btn-leave-group" type="button" class="btn-danger-soft">Leave</button>
+              </div>
+            </div>
 
-        <div>
-          <h3 style="font-size: 16px; margin-bottom: 12px;">🔬 Individual Clinical Reasoning & Mechanisms:</h3>
-          <div id="clinical-rationales-container"></div>
+            <div class="inline-action-pair">
+              <div class="input-btn-row">
+                <input id="new-group-name" type="text" aria-label="New group name" placeholder="New group name (e.g. Flat 4B)">
+                <button id="btn-create-group" type="button" class="btn-forest">Create</button>
+              </div>
+              <div class="input-btn-row">
+                <input id="join-group-code" type="text" aria-label="Invite code" placeholder="Enter invite code">
+                <button id="btn-join-group" type="button" class="btn-soft-emerald">Join</button>
+              </div>
+            </div>
+
+            <div id="group-status" class="status-banner" role="status"></div>
+
+            <div id="member-list" class="member-list">
+              <p class="muted-empty">No group joined yet — currently planning meals in Solo Mode.</p>
+            </div>
+          </div>
+
+          <!-- Google Profile, Dietary Safeguards & Vault Security -->
+          <div class="stack-gap">
+            <div class="airy-card">
+              <div class="airy-card-head">
+                <div>
+                  <h2>Google Profile &amp; Allergies</h2>
+                  <p>Synced from Google OpenID (`email`, `name`, `picture`).</p>
+                </div>
+                <button id="btn-logout" type="button" class="btn-danger-soft">Sign Out</button>
+              </div>
+
+              <div class="profile-summary-row">
+                <img id="profile-avatar" class="avatar-lg" src="" alt="Google profile picture">
+                <div>
+                  <div id="profile-name" class="profile-name">User</div>
+                  <div id="profile-email" class="profile-email">user@gmail.com</div>
+                  <div class="profile-token">Subject Token: <code id="profile-subject-token">sub_...</code></div>
+                </div>
+              </div>
+
+              <form id="profile-update-form" class="profile-form">
+                <div class="field-group">
+                  <label for="profile-diet">Dietary Preference</label>
+                  <select id="profile-diet">
+                    <option value="omnivore">Omnivore</option>
+                    <option value="pescatarian">Pescatarian</option>
+                    <option value="vegetarian">Vegetarian</option>
+                    <option value="vegan">Vegan</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="profile-allergies">Hard Allergy Exclusions (comma separated)</label>
+                  <input id="profile-allergies" type="text" placeholder="e.g. peanuts, shellfish, sesame">
+                </div>
+                <button type="submit" class="btn-forest full-w">Save Dietary Safeguards</button>
+                <div id="profile-status" class="status-banner" role="status"></div>
+              </form>
+            </div>
+
+            <div class="airy-card vault-card">
+              <h3>Zero-Trust Security &amp; Session Info</h3>
+              <ul class="vault-list">
+                <li><strong>Encryption:</strong> AES-256-GCM Field-Level PHI Vault</li>
+                <li><strong>Discovery Origin:</strong> <span id="vault-base-url">--</span></li>
+                <li><strong>Session Endpoints:</strong> <span id="vault-endpoint-count">0</span> resolved dynamically</li>
+              </ul>
+              <button id="btn-review-onboarding" type="button" class="btn-soft-emerald full-w">Re-open Safety &amp; Onboarding Guide</button>
+            </div>
+          </div>
         </div>
       </section>
     </main>
+
+    <!-- Mobile Bottom Navigation Bar (Visible on Small Screens after Sign-In) -->
+    <nav id="mobile-nav" class="bottom-nav" role="tablist" aria-label="Mobile sections" style="display: none;">
+      <button type="button" class="bottom-nav-item active" data-tab="today" role="tab" aria-selected="true">
+        <span aria-hidden="true">🌿</span>
+        <span>Today</span>
+      </button>
+      <button type="button" class="bottom-nav-item" data-tab="blood" role="tab" aria-selected="false">
+        <span aria-hidden="true">🩸</span>
+        <span>Blood</span>
+      </button>
+      <button type="button" class="bottom-nav-item" data-tab="insights" role="tab" aria-selected="false">
+        <span aria-hidden="true">✨</span>
+        <span>Insights</span>
+      </button>
+      <button type="button" class="bottom-nav-item" data-tab="circle" role="tab" aria-selected="false">
+        <span aria-hidden="true">👥</span>
+        <span>Circle</span>
+      </button>
+    </nav>
   </div>
+
+  <!-- Reusable Educational Guide Modal (Opened by ? Button Anytime) -->
+  <dialog id="guide-modal" class="airy-dialog" aria-labelledby="guide-modal-title">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <h2 id="guide-modal-title">Safety, Privacy &amp; Daily Health Guide</h2>
+        <button id="btn-close-guide" type="button" class="circle-icon-btn dark" aria-label="Close guide">✕</button>
+      </div>
+      <div class="guide-grid">
+        <div class="guide-block">
+          <span class="slide-badge badge-emerald">1. How Your Data Stays Safe</span>
+          <p>Your Google account (`name`, `email`) lives in Zone A. Blood lab observations are encrypted with AES-256-GCM in Zone B under a random synthetic `subject_token`—so raw PHI is isolated from identity.</p>
+        </div>
+        <div class="guide-block">
+          <span class="slide-badge badge-sage">2. How to Use SortMyPlate</span>
+          <p>Upload a diagnostic blood PDF or type markers in <strong>Blood Lab</strong>, check who's dining in <strong>Circle &amp; Vault</strong>, and tap <strong>Get Next Meal</strong> on Today for clinical nutrition tailored to the group.</p>
+        </div>
+        <div class="guide-block">
+          <span class="slide-badge badge-amber">3. Daily Health Impact</span>
+          <p>Consistent soluble-fiber targets, lower glycemic load, and omega-3 / iron pairing help calm daily glucose swings (`HbA1c`), inflammation (`hs-CRP`), and lipid stress (`ApoB`) over 6–12 weeks.</p>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Insight Details Modal -->
+  <dialog id="insight-modal" class="airy-dialog" aria-labelledby="insight-modal-title">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <span id="insight-modal-badge" class="slide-badge badge-sage">Clinical Pillar</span>
+          <h2 id="insight-modal-title">Insight Details</h2>
+        </div>
+        <button id="btn-close-insight" type="button" class="circle-icon-btn dark" aria-label="Close insight details">✕</button>
+      </div>
+      <p id="insight-modal-summary" class="slide-lead"></p>
+      <div id="insight-modal-points" class="feature-stack"></div>
+    </div>
+  </dialog>
 
   <script src="/static/app.js"></script>
 </body>

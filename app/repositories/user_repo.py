@@ -29,7 +29,7 @@ class UserRepository:
         google_sub: str,
         picture_url: Optional[str] = None,
         allergies: Optional[List[str]] = None,
-        diet_preference: str = "omnivore"
+        diet_preference: Optional[str] = None
     ) -> UserDB:
         user = await self.get_by_google_sub(session, google_sub)
         if not user:
@@ -44,7 +44,8 @@ class UserRepository:
                 user.picture_url = picture_url
             if allergies is not None:
                 user.allergies = allergies_json
-            user.diet_preference = diet_preference
+            if diet_preference is not None:
+                user.diet_preference = diet_preference
         else:
             user = UserDB(
                 email=email.lower().strip(),
@@ -52,7 +53,7 @@ class UserRepository:
                 google_sub=google_sub,
                 picture_url=picture_url,
                 subject_token=generate_subject_token(),
-                diet_preference=diet_preference,
+                diet_preference=diet_preference or "omnivore",
                 allergies=allergies_json
             )
             session.add(user)

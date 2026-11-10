@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.core.config import settings
+from app.core.security import resolve_public_base_url
 from app.db.seed import init_db
 from app.api.v1.auth import router as auth_router
 from app.api.v1.groups import router as groups_router
@@ -42,6 +43,13 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def add_in_app_auth_headers(request: Request, call_next):
+        response = await call_next(request)
+        # Allow Google Identity Services One Tap / in-page credential modals cleanly
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+        return response
+
     # Mount API routers
     app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth", tags=["Google Authentication"])
     app.include_router(groups_router, prefix=f"{settings.API_V1_STR}/groups", tags=["Households & Circles"])
@@ -65,26 +73,24 @@ def create_application() -> FastAPI:
         Frontends make their first call here on startup to obtain all API endpoint paths
         for the current session, avoiding hardcoded endpoint URLs.
         """
-        forwarded_host = request.headers.get("x-forwarded-host")
-        forwarded_proto = (request.headers.get("x-forwarded-proto") or "").lower()
-        if forwarded_host:
-            host = forwarded_host.split(",")[0].strip()
-            scheme = "https" if ("https" in forwarded_proto or "ramnaymcloud.com" in host) else request.url.scheme
-            base_url = f"{scheme}://{host}".rstrip("/")
-        else:
-            base_url = str(request.base_url).rstrip("/")
-            if ("https" in forwarded_proto or "ramnaymcloud.com" in base_url) and base_url.startswith("http://"):
-                base_url = base_url.replace("http://", "https://", 1)
+        base_url = resolve_public_base_url(request)
+        google_client_id = settings.GOOGLE_CLIENT_ID.strip()
+        google_client_secret = settings.GOOGLE_CLIENT_SECRET.strip()
 
         return {
             "service": settings.PROJECT_NAME,
             "version": settings.VERSION,
             "base_url": base_url,
-            "google_client_id": settings.GOOGLE_CLIENT_ID or None,
+            "google_client_id": google_client_id or None,
+            "google_oauth_enabled": bool(google_client_id and google_client_secret),
+            "google_gis_enabled": bool(google_client_id),
             "endpoints": {
                 "health": "/health",
                 "llm_status": "/health/llm-status",
                 "auth_google": f"{settings.API_V1_STR}/auth/google",
+                "auth_google_login": f"{settings.API_V1_STR}/auth/google/login",
+                "auth_google_exchange": f"{settings.API_V1_STR}/auth/google/exchange",
+                "auth_google_session": f"{settings.API_V1_STR}/auth/google/session/{{oauth_state}}",
                 "auth_me": f"{settings.API_V1_STR}/auth/me",
                 "auth_profile": f"{settings.API_V1_STR}/auth/profile",
                 "groups_create": f"{settings.API_V1_STR}/groups/create",

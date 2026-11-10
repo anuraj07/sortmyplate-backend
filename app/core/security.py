@@ -29,3 +29,19 @@ def generate_subject_token() -> str:
     Health records are stored against this token, isolating them from PII.
     """
     return f"sub_{uuid.uuid4()}"
+
+def resolve_public_base_url(request) -> str:
+    """
+    Resolves the external HTTPS base URL safely behind reverse proxies (e.g. RamNaym Cloud).
+    """
+    forwarded_host = request.headers.get("x-forwarded-host")
+    forwarded_proto = (request.headers.get("x-forwarded-proto") or "").lower()
+    if forwarded_host:
+        host = forwarded_host.split(",")[0].strip()
+        scheme = "https" if ("https" in forwarded_proto or "ramnaymcloud.com" in host) else request.url.scheme
+        return f"{scheme}://{host}".rstrip("/")
+
+    base_url = str(request.base_url).rstrip("/")
+    if ("https" in forwarded_proto or "ramnaymcloud.com" in base_url) and base_url.startswith("http://"):
+        base_url = base_url.replace("http://", "https://", 1)
+    return base_url

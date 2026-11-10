@@ -14,8 +14,10 @@ class Settings(BaseSettings):
     # Database Settings
     DATABASE_URL: str = "sqlite+aiosqlite:///./sortmyplate.db"
     
-    # Google Sign-In
+    # Google Sign-In & OAuth 2.0
     GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
     
     # LLM Settings
     LLM_PROVIDER: Literal["mock", "deepseek", "claude", "openai"] = "mock"

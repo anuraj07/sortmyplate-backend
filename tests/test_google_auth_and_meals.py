@@ -175,3 +175,210 @@ def test_dynamic_endpoint_discovery_and_multi_user_meal_flow():
         charlie_groups = client.get(endpoints["groups_my"], headers=charlie_headers)
         assert charlie_groups.status_code == 200
         assert len(charlie_groups.json()) == 0
+
+
+def test_real_google_oauth_code_exchange_and_replay_protection(monkeypatch):
+    from app.core.config import settings
+    from app.api.v1 import auth as auth_module
+
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", "test-google-client.apps.googleusercontent.com")
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_SECRET", "test-google-secret")
+
+    async def fake_exchange(code: str, redirect_uri: str) -> dict:
+        assert code == "valid_google_code"
+        return {
+            "sub": "google-sub-999111",
+            "email": "maya.patel@gmail.com",
+            "email_verified": True,
+            "name": "Maya Patel",
+            "picture": "https://lh3.googleusercontent.com/a/maya-avatar",
+        }
+
+    monkeypatch.setattr(auth_module, "_exchange_google_code_for_profile", fake_exchange)
+
+    with TestClient(app) as client:
+        boot = client.get("/bootstrap").json()
+        assert boot["google_oauth_enabled"] is True
+        endpoints = boot["endpoints"]
+
+        # Reject open-redirect target outside allowlist
+        bad_redirect = client.get(
+            endpoints["auth_google_login"],
+            params={"state": "client_state_1234567890", "redirect_to": "https://evil.example.com", "response_mode": "json"},
+        )
+        assert bad_redirect.status_code == 400
+
+        # Initiate OAuth flow via discovered endpoint
+        login_res = client.get(
+            endpoints["auth_google_login"],
+            params={"state": "client_state_1234567890", "platform": "web", "redirect_to": "/", "response_mode": "json"},
+        )
+        assert login_res.status_code == 200
+        auth_url = login_res.json()["auth_url"]
+        assert "accounts.google.com/o/oauth2/v2/auth" in auth_url
+        assert "scope=openid+email+profile" in auth_url
+
+        # Simulate Google redirecting back to callback
+        cb_res = client.get(
+            "/v1/auth/google/callback",
+            params={"code": "valid_google_code", "state": "client_state_1234567890"},
+            follow_redirects=False,
+        )
+        assert cb_res.status_code == 302
+        location = cb_res.headers["location"]
+        assert "oauth_state=client_state_1234567890" in location
+        exchange_code = location.split("oauth_code=")[1].split("&")[0]
+
+        # Exchange one-time code for JWT + profile fetched from Google
+        exchange_res = client.post(
+            endpoints["auth_google_exchange"],
+            json={"state": "client_state_1234567890", "exchange_code": exchange_code},
+        )
+        assert exchange_res.status_code == 200
+        auth_data = exchange_res.json()
+        assert auth_data["email"] == "maya.patel@gmail.com"
+        assert auth_data["full_name"] == "Maya Patel"
+        assert auth_data["picture_url"] == "https://lh3.googleusercontent.com/a/maya-avatar"
+        assert auth_data["access_token"]
+
+        # Replay of consumed state/exchange code must fail
+        replay_res = client.post(
+            endpoints["auth_google_exchange"],
+            json={"state": "client_state_1234567890", "exchange_code": exchange_code},
+        )
+        assert replay_res.status_code == 409
+
+        # Update allergies & diet preference and verify a second OAuth login preserves them
+        upd_res = client.put(
+            endpoints["auth_profile"],
+            json={"allergies": ["tree nuts"], "diet_preference": "vegetarian"},
+            headers={"Authorization": f"Bearer {auth_data['access_token']}"},
+        )
+        assert upd_res.status_code == 200
+        assert upd_res.json()["diet_preference"] == "vegetarian"
+
+        # Second mobile/poll login preserves diet & allergies
+        login2 = client.get(
+            endpoints["auth_google_login"],
+            params={"state": "mobile_state_0987654321", "platform": "wasm", "response_mode": "json"},
+        )
+        assert login2.status_code == 200
+        cb2 = client.get(
+            "/v1/auth/google/callback",
+            params={"code": "valid_google_code", "state": "mobile_state_0987654321"},
+        )
+        assert cb2.status_code == 200
+
+        poll_url = endpoints["auth_google_session"].replace("{oauth_state}", "mobile_state_0987654321")
+        poll_res = client.get(poll_url)
+        assert poll_res.status_code == 200
+        polled = poll_res.json()
+        assert polled["status"] == "completed"
+        assert polled["auth"]["diet_preference"] == "vegetarian"
+        assert "tree nuts" in polled["auth"]["allergies"]
+
+
+def test_in_app_google_id_token_and_access_token_and_static_icons(monkeypatch):
+    import httpx
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", "inapp-client-123.apps.googleusercontent.com")
+
+    class _FakeResponse:
+        def __init__(self, status_code: int, payload: dict):
+            self.status_code = status_code
+            self._payload = payload
+
+        def json(self) -> dict:
+            return self._payload
+
+    class _FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, url: str, params=None, headers=None):
+            if "tokeninfo" in url:
+                tok = (params or {}).get("id_token")
+                if tok == "valid-id-token":
+                    return _FakeResponse(200, {
+                        "aud": "inapp-client-123.apps.googleusercontent.com",
+                        "sub": "gis-sub-001",
+                        "email": "priya.nair@gmail.com",
+                        "email_verified": "true",
+                        "name": "Priya Nair",
+                        "picture": "https://lh3.googleusercontent.com/a/priya",
+                    })
+                if tok == "unverified-id-token":
+                    return _FakeResponse(200, {
+                        "aud": "inapp-client-123.apps.googleusercontent.com",
+                        "sub": "gis-sub-unv",
+                        "email": "unverified@gmail.com",
+                        "email_verified": "false",
+                        "name": "Unverified",
+                    })
+                return _FakeResponse(401, {"error": "invalid_token"})
+
+            if "userinfo" in url:
+                auth_header = (headers or {}).get("Authorization", "")
+                if auth_header == "Bearer valid-google-access-token":
+                    return _FakeResponse(200, {
+                        "sub": "gis-tok-sub-002",
+                        "email": "rohan.mehta@gmail.com",
+                        "email_verified": True,
+                        "name": "Rohan Mehta",
+                        "picture": "https://lh3.googleusercontent.com/a/rohan",
+                    })
+                return _FakeResponse(401, {"error": "invalid_token"})
+            return _FakeResponse(404, {})
+
+    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+
+    with TestClient(app) as client:
+        boot_resp = client.get("/bootstrap")
+        assert boot_resp.status_code == 200
+        assert boot_resp.headers.get("cross-origin-opener-policy") == "same-origin-allow-popups"
+        boot = boot_resp.json()
+        assert boot["google_gis_enabled"] is True
+
+        # 1. Verify in-app id_token sign-in (Credential Manager / GIS One Tap)
+        id_res = client.post(boot["endpoints"]["auth_google"], json={"id_token": "valid-id-token"})
+        assert id_res.status_code == 200
+        priya = id_res.json()
+        assert priya["email"] == "priya.nair@gmail.com"
+        assert priya["full_name"] == "Priya Nair"
+        assert priya["picture_url"] == "https://lh3.googleusercontent.com/a/priya"
+
+        # 2. Unverified Google email must be rejected
+        unv_res = client.post(boot["endpoints"]["auth_google"], json={"id_token": "unverified-id-token"})
+        assert unv_res.status_code == 401
+
+        # 3. Verify in-app google_access_token sign-in (GIS Token Client)
+        tok_res = client.post(
+            boot["endpoints"]["auth_google"],
+            json={"google_access_token": "valid-google-access-token"},
+        )
+        assert tok_res.status_code == 200
+        rohan = tok_res.json()
+        assert rohan["email"] == "rohan.mehta@gmail.com"
+        assert rohan["full_name"] == "Rohan Mehta"
+
+        # 4. Verify web icon assets & post-login onboarding HTML structure
+        html_res = client.get("/")
+        assert html_res.status_code == 200
+        assert "/static/favicon.svg" in html_res.text
+        assert 'id="onboarding-section"' in html_res.text
+        for static_path in [
+            "/static/favicon.svg",
+            "/static/icon-192.png",
+            "/static/icon-512.png",
+            "/static/apple-touch-icon.png",
+            "/static/manifest.webmanifest",
+        ]:
+            asset_res = client.get(static_path)
+            assert asset_res.status_code == 200, f"Missing static asset: {static_path}"
