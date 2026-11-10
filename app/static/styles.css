@@ -367,6 +367,7 @@ header {
 
 /* Upload Dropzone */
 .dropzone {
+  display: block;
   border: 2px dashed rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
   padding: 18px;
@@ -376,9 +377,44 @@ header {
   margin-top: 14px;
 }
 
-.dropzone:hover {
+.dropzone:hover,
+.dropzone:focus-visible {
   border-color: var(--accent-cyan);
   background: rgba(56, 189, 248, 0.04);
+  outline: none;
+}
+
+.status-banner {
+  display: none;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.status-banner.show {
+  display: block;
+}
+
+.status-banner.error {
+  background: rgba(244, 63, 94, 0.14);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: var(--accent-rose);
+}
+
+.status-banner.success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--accent-emerald);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
 }
 
 /* Next Meal Output Card */

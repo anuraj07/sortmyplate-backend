@@ -91,6 +91,17 @@ async def join_group(
         members=members
     )
 
+@router.post("/{group_id}/leave")
+async def leave_group(
+    group_id: str,
+    current_user: UserDB = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    success = await group_repo.leave_group(session, user_id=current_user.id, group_id=group_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Could not leave group or not a member")
+    return {"message": "Left group successfully", "group_id": group_id}
+
 @router.get("/my", response_model=List[GroupResponse])
 async def get_my_groups(
     current_user: UserDB = Depends(get_current_user),
