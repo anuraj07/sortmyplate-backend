@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # Production-Grade PostgreSQL 16 for SortMyPlate
+  postgres:
+    image: postgres:16-alpine
+    container_name: sortmyplate_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: sortmyplate_admin
+      POSTGRES_PASSWORD: super_secure_dev_password_2026
+      POSTGRES_DB: sortmyplate_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sortmyplate_admin -d sortmyplate_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local

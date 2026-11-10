@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SortMyPlate | Biomarker-Driven Nutrition Engine</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2226%22 font-size=%2224%22>🥗</text></svg>">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">🥗</div>
+        <div class="brand-text">
+          <h1>SortMyPlate</h1>
+          <p>Zero-Trust Biomarker Nutrition Engine</p>
+        </div>
+      </div>
+
+      <div class="user-controls">
+        <div class="security-pill">
+          <span>🔒</span>
+          <span>AES-256-GCM PHI Vault</span>
+        </div>
+
+        <div id="llm-pill" class="security-pill" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: var(--accent-purple);">
+          <span>🧠</span>
+          <span id="llm-model-name">LLM Engine: Initializing...</span>
+        </div>
+
+        <div class="user-badge">
+          <img id="user-avatar" class="avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" alt="Avatar">
+          <div>
+            <div id="user-name" class="user-name">Alex Demo</div>
+            <div id="user-email" style="font-size: 11px; color: var(--text-muted);">alex.demo@gmail.com</div>
+          </div>
+          <button id="btn-switch-user" class="btn-secondary" style="margin-left: 8px;">Reset Demo User</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero 1-Click Action -->
+    <section class="hero-card">
+      <h2 class="hero-title">What should I eat next?</h2>
+      <p class="hero-subtitle">
+        Instant, clinically-reasoned meal tailored directly to your 6-month blood biomarkers 
+        and your household's real-time cooking circle.
+      </p>
+
+      <div class="action-bar">
+        <select id="meal-slot-select" class="select-custom">
+          <option value="DINNER" selected>🌙 Dinner</option>
+          <option value="LUNCH">☀️ Lunch</option>
+          <option value="BREAKFAST">🌅 Breakfast</option>
+          <option value="SNACK">🍎 Afternoon Snack</option>
+        </select>
+
+        <button id="btn-next-meal" class="btn-primary">
+          <span>✨</span>
+          <span>Get Next Meal</span>
+        </button>
+      </div>
+
+      <div style="margin-top: 16px; font-size: 12px; color: var(--text-muted);">
+        🔒 Decoupled Subject Token: <code id="subject-token-display" style="color: var(--accent-cyan);">sub_...</code>
+      </div>
+    </section>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-grid">
+      <!-- Household / Flatmates Panel -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span>👥</span>
+            <span id="group-name">Flat 4B Roommates</span>
+          </h2>
+          <span style="font-size: 12px; color: var(--text-secondary);">
+            Invite Code: <strong id="group-invite-code" style="color: var(--accent-cyan);">FLAT4B</strong>
+          </span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+          Check who is eating dinner right now. The engine re-adapts the recipe in real time:
+        </p>
+
+        <div id="member-list" class="member-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Blood Biomarkers & PDF Upload Panel -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span>🩸</span>
+            <span>Latest Blood Panel (6-Month Vault)</span>
+          </h2>
+          <span id="lab-provider-info" style="font-size: 11px; color: var(--accent-emerald);">Quest Diagnostics</span>
+        </div>
+
+        <table class="biomarker-table">
+          <thead>
+            <tr>
+              <th>Biomarker</th>
+              <th>Value</th>
+              <th>Clinical Status</th>
+            </tr>
+          </thead>
+          <tbody id="biomarkers-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+
+        <!-- PDF Upload Dropzone -->
+        <div class="dropzone" onclick="document.getElementById('pdf-input').click()">
+          <input type="file" id="pdf-input" accept="application/pdf" style="display: none;">
+          <div style="font-size: 20px; margin-bottom: 4px;">📄</div>
+          <div style="font-size: 13px; font-weight: 600;">Upload New Lab Report (PDF)</div>
+          <div id="upload-status" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            Supports Quest, LabCorp, Metropolis & Hospital PDFs (Encrypted on upload)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meal Recommendation Output Section -->
+    <section id="meal-result-container" class="meal-result">
+      <div id="allergen-safeguard-banner" class="allergen-banner" style="display: none;"></div>
+
+      <div class="meal-header">
+        <div class="meal-title">
+          <h2 id="meal-title-text">Meal Title</h2>
+          <p id="meal-desc-text">Meal description</p>
+        </div>
+        <div id="meal-prep-badge" class="badge badge-normal" style="font-size: 13px; padding: 6px 12px;">
+          ⏱️ 25 mins prep
+        </div>
+      </div>
+
+      <!-- Macros -->
+      <div class="macro-grid">
+        <div class="macro-box">
+          <div id="macro-calories" class="macro-value">520 kcal</div>
+          <div class="macro-label">Calories</div>
+        </div>
+        <div class="macro-box">
+          <div id="macro-protein" class="macro-value">28g</div>
+          <div class="macro-label">Protein</div>
+        </div>
+        <div class="macro-box">
+          <div id="macro-fiber" class="macro-value">14g</div>
+          <div class="macro-label">Soluble Fiber</div>
+        </div>
+        <div class="macro-box">
+          <div id="macro-gl" class="macro-value">8.5</div>
+          <div class="macro-label">Glycemic Load</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 16px; margin-bottom: 8px;">🥣 Shared Base Ingredients:</h3>
+        <ul id="ingredients-list" style="list-style-position: inside; color: var(--text-secondary); line-height: 1.8;">
+        </ul>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 16px; margin-bottom: 8px;">🤝 Household Consensus Summary:</h3>
+        <p id="consensus-summary-text" style="color: var(--text-secondary); line-height: 1.6;"></p>
+      </div>
+
+      <div>
+        <h3 style="font-size: 16px; margin-bottom: 12px;">🔬 Individual Clinical Reasoning & Mechanisms:</h3>
+        <div id="clinical-rationales-container">
+          <!-- Dynamic clinical cards -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

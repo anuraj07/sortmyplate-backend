@@ -1,0 +1,229 @@
+openapi: 3.1.0
+info:
+  title: SortMyPlate Core Headless API
+  description: >
+    Enterprise-grade backend-heavy API for biomarker-driven personalized nutrition.
+    Supports secure PHI ingestion, family/household profiles, and instant explainable next-meal recommendations.
+  version: 1.0.0
+servers:
+  - url: https://api.sortmyplate.io/v1
+    description: Production API Gateway
+  - url: http://localhost:8080/v1
+    description: Local Development Environment
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health/reports/presigned-upload:
+    post:
+      summary: Request a secure presigned upload URL for a blood report
+      description: Returns a short-lived WORM S3/GCS presigned URL for direct, encrypted document upload.
+      operationId: getReportUploadUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile_id, file_name, file_size_bytes, mime_type]
+              properties:
+                profile_id:
+                  type: string
+                  format: uuid
+                  example: "4a8b11ee-be56-42d8-9021-ef7c98020a11"
+                file_name:
+                  type: string
+                  example: "Annual_Blood_Work_2026.pdf"
+                file_size_bytes:
+                  type: integer
+                  example: 2450302
+                mime_type:
+                  type: string
+                  enum: [application/pdf, image/jpeg, image/png]
+                  example: "application/pdf"
+      responses:
+        '201':
+          description: Presigned URL generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url:
+                    type: string
+                    format: uri
+                  file_key:
+                    type: string
+                  expires_in_seconds:
+                    type: integer
+                    example: 300
+
+  /health/reports/process:
+    post:
+      summary: Trigger asynchronous ingestion and clinical normalization of an uploaded report
+      operationId: processReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_key, profile_id]
+              properties:
+                file_key:
+                  type: string
+                profile_id:
+                  type: string
+                  format: uuid
+      responses:
+        '202':
+          description: Report queued for OCR extraction, LOINC mapping, and clinical validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [QUEUED, PROCESSING]
+
+  /meals/next:
+    post:
+      summary: Retrieve the single optimal next meal with clinical explainability
+      description: Core 1-click endpoint designed for sub-200ms latency across any frontend (mobile, web, smart fridge, wearable).
+      operationId: getNextMeal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile_id, meal_slot]
+              properties:
+                profile_id:
+                  type: string
+                  format: uuid
+                meal_slot:
+                  type: string
+                  enum: [BREAKFAST, LUNCH, SNACK, DINNER, POST_WORKOUT]
+                  example: "LUNCH"
+                household_mode:
+                  type: boolean
+                  default: false
+                  description: If true, synthesizes a shared prep meal suitable for all members in the household.
+                servings:
+                  type: integer
+                  default: 1
+                prep_time_limit_minutes:
+                  type: integer
+                  example: 30
+                dining_mode:
+                  type: string
+                  enum: [HOME_COOKING, EAT_OUT_GUIDANCE, MEAL_KIT]
+                  default: "HOME_COOKING"
+      responses:
+        '200':
+          description: Next meal generated with clinical reasoning
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealRecommendationResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    MealRecommendationResponse:
+      type: object
+      required:
+        - meal_id
+        - title
+        - prep_time_minutes
+        - macros
+        - clinical_reasoning
+        - ingredients
+      properties:
+        meal_id:
+          type: string
+          example: "meal_med_salmon_farro_bowl_421"
+        title:
+          type: string
+          example: "Wild Salmon & Warm Farro Mediterranean Bowl"
+        prep_time_minutes:
+          type: integer
+          example: 20
+        difficulty:
+          type: string
+          enum: [EASY, MEDIUM, ADVANCED]
+          example: "EASY"
+        macros:
+          type: object
+          properties:
+            calories:
+              type: integer
+              example: 540
+            protein_g:
+              type: number
+              example: 38.0
+            net_carbs_g:
+              type: number
+              example: 42.0
+            fat_g:
+              type: number
+              example: 22.0
+            fiber_g:
+              type: number
+              example: 11.0
+        clinical_reasoning:
+          type: object
+          required: [summary, key_benefits]
+          properties:
+            summary:
+              type: string
+              example: "Tailored for your elevated ApoB (118 mg/dL) and borderline Ferritin (18 ng/mL) from your October blood panel."
+            key_benefits:
+              type: array
+              items:
+                type: object
+                required: [biomarker, action, mechanism]
+                properties:
+                  biomarker:
+                    type: string
+                    example: "ApoB & LDL-C"
+                  action:
+                    type: string
+                    example: "Lowering Circulating Atherogenic Particles"
+                  mechanism:
+                    type: string
+                    example: "Wild salmon provides 2.1g of EPA/DHA Omega-3s, while whole farro and chickpeas supply 11g of soluble fiber to bind bile acids in the intestine, forcing hepatic LDL receptor clearance."
+        ingredients:
+          type: array
+          items:
+            type: object
+            required: [name, amount, unit]
+            properties:
+              name:
+                type: string
+              amount:
+                type: string
+              unit:
+                type: string
+        quick_swaps:
+          type: array
+          items:
+            type: object
+            properties:
+              swap_for:
+                type: string
+              alternative:
+                type: string
+              reason:
+                type: string

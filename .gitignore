@@ -1,0 +1,26 @@
+# Virtual environments & dependencies
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment variables & sensitive local DBs
+.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Build & packaging artifacts
+*.zip
+dist/
+build/
+
+# IDE & OS files
+.idea/
+.vscode/
+.DS_Store
